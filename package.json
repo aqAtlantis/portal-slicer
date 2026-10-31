@@ -1,0 +1,18 @@
+{
+  "name": "portal-slicer",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Mineflayer bot that slices nether portals (phase 1 + phase 2)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "plan": "node src/plan.js",
+    "clear-lockout": "node src/index.js --clear-lockout"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "mineflayer": "4.39.0",
+    "mineflayer-pathfinder": "2.4.5",
+    "vec3": "0.2.0"
+  }
+}

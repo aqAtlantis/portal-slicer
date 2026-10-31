@@ -1,0 +1,230 @@
+{
+  "connection": {
+    "host": "SET_SERVER_ADDRESS",
+    "port": 25565,
+    "username": "SlicerBot",
+    "auth": "offline",
+    "version": false
+  },
+  "owners": [
+    "YourMinecraftName"
+  ],
+  "serverAuth": {
+    "enabled": true,
+    "autoLogin": true,
+    "passwordEnv": "SLICER_AUTH_PASSWORD"
+  },
+  "chatPrefix": "!slicer",
+  "ai": {
+    "_help": "Answers '!slicer ask <question>'. The API key is read from the environment variable named in apiKeyEnv, never stored here.",
+    "enabled": true,
+    "apiKeyEnv": "ANTHROPIC_API_KEY",
+    "model": "claude-haiku-5-5",
+    "maxTokens": 200,
+    "allowEveryone": false,
+    "cooldownSeconds": 10,
+    "maxPerHour": 60
+  },
+  "reconnect": {
+    "enabled": true,
+    "delayMs": 15000,
+    "maxDelayMs": 300000
+  },
+  "hub": {
+    "_help": "Positions from the 2026-10-31 hub screenshots. stand = where the bot stands (between the two target blocks, east of the chests).",
+    "stand": [
+      0,
+      64,
+      0
+    ],
+    "boxStations": {
+      "redstone_block": {
+        "chest": [
+          0,
+          64,
+          0
+        ],
+        "target": [
+          0,
+          64,
+          0
+        ]
+      },
+      "fire_charge": {
+        "chest": [
+          0,
+          64,
+          0
+        ],
+        "target": [
+          0,
+          64,
+          0
+        ]
+      }
+    },
+    "pickaxeChest": [
+      0,
+      64,
+      0
+    ],
+    "trapdoorChest": [
+      0,
+      64,
+      0
+    ],
+    "foodBox": [
+      0,
+      64,
+      0
+    ],
+    "swapPickaxeBelow": 64,
+    "emptyBoxDisposal": {
+      "_help": "auto = find the nearest platform edge (N/S/W of the hub) and throw empty boxes off it. Or set stand + lookAt [x,y,z] to pick the spot yourself. If no edge is found they go back in their chest.",
+      "auto": true,
+      "stand": null,
+      "lookAt": null
+    }
+  },
+  "restock": {
+    "thresholds": {
+      "redstone_block": 10,
+      "iron_trapdoor": 10,
+      "fire_charge": 10
+    },
+    "targets": {
+      "redstone_block": 768,
+      "fire_charge": 768,
+      "iron_trapdoor": 128
+    },
+    "minPickaxeDurability": 100,
+    "foodItem": "cooked_porkchop",
+    "foodTarget": 64,
+    "minFood": 8
+  },
+  "food": {
+    "items": [
+      "golden_carrot",
+      "cooked_porkchop"
+    ],
+    "eatAtOrBelow": 6,
+    "eatUntil": 14
+  },
+  "slicing": {
+    "_help": "fireCharge = bottom portal block of portal #1 in row 1. Every template entry is an offset [dx,dy,dz] from that block, confirmed with Targeted Block on 2026-10-30.",
+    "fireCharge": [
+      0,
+      64,
+      0
+    ],
+    "template": {
+      "stand": [
+        3.089,
+        0,
+        0.951
+      ],
+      "lightClick": {
+        "block": [
+          0,
+          1,
+          2
+        ],
+        "face": [
+          0,
+          0,
+          -1
+        ]
+      },
+      "trapdoorA": {
+        "pos": [
+          1,
+          2,
+          0
+        ],
+        "clickBlock": [
+          0,
+          2,
+          0
+        ],
+        "face": [
+          1,
+          0,
+          0
+        ]
+      },
+      "trapdoorB": {
+        "pos": [
+          1,
+          1,
+          1
+        ],
+        "clickBlock": [
+          0,
+          1,
+          1
+        ],
+        "face": [
+          1,
+          0,
+          0
+        ]
+      },
+      "redstone": {
+        "pos": [
+          1,
+          1,
+          0
+        ],
+        "clickBlock": [
+          0,
+          1,
+          0
+        ],
+        "face": [
+          1,
+          0,
+          0
+        ]
+      },
+      "obsidian1": [
+        0,
+        1,
+        2
+      ],
+      "obsidian2": [
+        0,
+        1,
+        -1
+      ],
+      "interior": {
+        "min": [
+          0,
+          0,
+          0
+        ],
+        "max": [
+          0,
+          2,
+          1
+        ]
+      }
+    },
+    "efficiencyOverride": null,
+    "suppressionRetries": 2,
+    "maxConsecutiveFailures": 2,
+    "portalsPerUnit": 9,
+    "unitsPerRow": 20,
+    "rows": 50,
+    "portalStep": [
+      1,
+      0,
+      0
+    ],
+    "unitGap": 4,
+    "rowStep": [
+      0,
+      0,
+      4
+    ]
+  }
+}
