@@ -1,5 +1,7 @@
 # Portal slicer bot
 
+everything below is ai
+
 Mineflayer bot that slices configured Nether portal layouts. Set your own server and layout details locally before running.
 
 ## Setup
