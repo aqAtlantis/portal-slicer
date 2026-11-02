@@ -30,6 +30,8 @@ const DEFAULT_STATE = {
   // true after "!bot start": the bot keeps slicing, and resumes on its own after a reconnect
   running: false,
   failedPortals: [], // portal numbers whose portal broke completely
+  fragileObsidian: false, // "!slicer fragileobsidian": mine obsidian in 1 game tick
+  hourlyReport: true, // "!slicer report on|off": public message about the work done every hour
   status: 'idle', // idle | restocking | slicing | paused | finished | totem_lockout
   lastRestockAt: null,
   updatedAt: null
@@ -51,8 +53,19 @@ function save (patch = {}) {
   load()
   Object.assign(state, patch, { updatedAt: new Date().toISOString() })
   const tmp = STATE_FILE + '.tmp'
-  fs.writeFileSync(tmp, JSON.stringify(state, null, 2))
-  fs.renameSync(tmp, STATE_FILE)
+  const text = JSON.stringify(state, null, 2)
+  fs.writeFileSync(tmp, text)
+  // Windows can briefly lock the file (antivirus, sync tools, an open editor): retry,
+  // and as a last resort write it directly, so a save never stops the bot.
+  for (let attempt = 0; ; attempt++) {
+    try { fs.renameSync(tmp, STATE_FILE); break } catch (e) {
+      if (attempt < 10 && (e.code === 'EPERM' || e.code === 'EBUSY' || e.code === 'EACCES')) {
+        const until = Date.now() + 50; while (Date.now() < until) {} // wait 50 ms
+        continue
+      }
+      try { fs.writeFileSync(STATE_FILE, text); try { fs.unlinkSync(tmp) } catch (_) {} break } catch (_) { throw e }
+    }
+  }
   return state
 }
 

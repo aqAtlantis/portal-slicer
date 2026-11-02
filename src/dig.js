@@ -68,9 +68,12 @@ async function digExact (bot, pos, expected, cfg) {
   await bot.lookAt(pos.offset(0.5, 0.5, 0.5), true)
 
   const eventName = `blockUpdate:${pos}`
+  // "!slicer fragileobsidian on": the server makes obsidian break almost instantly,
+  // so finish after 1 game tick. If the server rejects that, retry at normal speed.
+  const fragile = expected === 'obsidian' && require('./state').get().fragileObsidian
   for (let attempt = 0; attempt < 2; attempt++) {
     const base = digTicks(bot, block, cfg)
-    const ticks = attempt === 0 ? base : Math.ceil(base * 1.3) + 2
+    const ticks = fragile ? (attempt === 0 ? 1 : base) : (attempt === 0 ? base : Math.ceil(base * 1.3) + 2)
     let gone = false
     const onUpdate = (_old, now) => { if (now && now.name !== expected) gone = true }
     bot.on(eventName, onUpdate)
@@ -89,7 +92,9 @@ async function digExact (bot, pos, expected, cfg) {
     }
     if (gone || bot.blockAt(pos)?.name !== expected) return ticks
     sendDig(bot, 1, pos) // cancel before retrying
-    log.warn(`dig ${expected} at ${pos}: server did not confirm after ${ticks} ticks, retrying`)
+    log.warn(fragile && attempt === 0
+      ? `dig obsidian at ${pos}: 1-tick break (fragileobsidian) was rejected, retrying at normal speed`
+      : `dig ${expected} at ${pos}: server did not confirm after ${ticks} ticks, retrying`)
     await bot.waitForTicks(4)
   }
   throw new Error(`could not break ${expected} at ${pos}`)

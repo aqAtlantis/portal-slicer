@@ -43,24 +43,39 @@ function setup (bot) {
 }
 
 // Walk to a block position (feet position). range 0 = stand exactly in that block.
-async function goto (bot, x, y, z, range = 0, timeoutMs = 120000) {
+// Retries up to 3 times: a player or item briefly in the way, or chunks still
+// updating, can make a single attempt fail ("Took to long to decide path to goal").
+async function goto (bot, x, y, z, range = 0, timeoutMs = 300000, attempts = 3) {
   const goal = range > 0 ? new goals.GoalNear(x, y, z, range) : new goals.GoalBlock(x, y, z)
-  let timer
-  try {
-    await Promise.race([
-      bot.pathfinder.goto(goal),
-      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('goto timeout')), timeoutMs) })
-    ])
-  } finally {
-    clearTimeout(timer)
-    bot.pathfinder.setGoal(null)
+  for (let a = 1; ; a++) {
+    let timer
+    try {
+      await Promise.race([
+        bot.pathfinder.goto(goal),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('goto timeout')), timeoutMs) })
+      ])
+      return
+    } catch (e) {
+      if (a >= attempts) throw e
+      log.warn(`path to ${x} ${y} ${z} failed (${e.message}), retrying ${a}/${attempts - 1}`)
+      bot.pathfinder.setGoal(null)
+      bot.clearControlStates()
+      await sleep(2000)
+    } finally {
+      clearTimeout(timer)
+      bot.pathfinder.setGoal(null)
+    }
   }
 }
 
 // Fine-tune to an exact x/z (e.g. a precise configured position) while sneaking, so it cannot
 // walk off an edge during the adjustment.
 async function moveToExact (bot, x, y, z, tolerance = 0.08, maxTicks = 80) {
-  await goto(bot, Math.floor(x), Math.floor(y), Math.floor(z))
+  // Short shuffles (e.g. 1 block to the next portal) don't need the pathfinder:
+  // the sneaking walk below can't fall off anything.
+  const p0 = bot.entity.position
+  const short = Math.hypot(x - p0.x, z - p0.z) < 2 && Math.abs(Math.floor(y) - Math.floor(p0.y)) === 0
+  if (!short) await goto(bot, Math.floor(x), Math.floor(y), Math.floor(z))
   bot.setControlState('sneak', true)
   try {
     for (let i = 0; i < maxTicks; i++) {

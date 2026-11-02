@@ -7,7 +7,7 @@
     "version": false
   },
   "owners": [
-    "YourMinecraftName"
+    "YourMinecraftUsername"
   ],
   "serverAuth": {
     "enabled": true,
@@ -16,14 +16,27 @@
   },
   "chatPrefix": "!slicer",
   "ai": {
-    "_help": "Answers '!slicer ask <question>'. The API key is read from the environment variable named in apiKeyEnv, never stored here.",
+    "_help": "Optional chat personality and hourly report settings. API key is read from apiKeyEnv and is never stored here.",
     "enabled": true,
-    "apiKeyEnv": "ANTHROPIC_API_KEY",
-    "model": "claude-haiku-5-5",
+    "apiKeyEnv": "DEEPSEEK_API_KEY",
+    "baseUrl": "https://api.deepseek.com/anthropic",
+    "model": "deepseek-chat",
     "maxTokens": 200,
-    "allowEveryone": false,
+    "persona": "Bot",
+    "creator": "your owner",
+    "nicknames": [],
+    "allowEveryone": true,
+    "answerMentions": true,
+    "answerWhispers": true,
+    "replyPublicly": true,
+    "publicCooldownSeconds": 20,
     "cooldownSeconds": 10,
-    "maxPerHour": 60
+    "maxPerHour": 120,
+    "ignorePlayers": [],
+    "hourlyReport": {
+      "enabled": true,
+      "minutes": 60
+    }
   },
   "reconnect": {
     "enabled": true,
@@ -31,7 +44,7 @@
     "maxDelayMs": 300000
   },
   "hub": {
-    "_help": "Positions from the 2026-10-31 hub screenshots. stand = where the bot stands (between the two target blocks, east of the chests).",
+    "_help": "Set these positions to match your own material hub.",
     "stand": [
       0,
       64,
@@ -61,14 +74,28 @@
           64,
           0
         ]
+      },
+      "iron_trapdoor": {
+        "chests": [
+          [
+            0,
+            64,
+            0
+          ],
+          [
+            0,
+            64,
+            0
+          ]
+        ],
+        "target": [
+          0,
+          64,
+          0
+        ]
       }
     },
     "pickaxeChest": [
-      0,
-      64,
-      0
-    ],
-    "trapdoorChest": [
       0,
       64,
       0
@@ -78,7 +105,20 @@
       64,
       0
     ],
-    "swapPickaxeBelow": 64,
+    "swapPickaxeBelow": 100,
+    "junkChest": [
+      0,
+      64,
+      0
+    ],
+    "keepItems": [
+      "netherite_pickaxe",
+      "fire_charge",
+      "redstone_block",
+      "cooked_porkchop",
+      "iron_trapdoor",
+      "totem_of_undying"
+    ],
     "emptyBoxDisposal": {
       "_help": "auto = find the nearest platform edge (N/S/W of the hub) and throw empty boxes off it. Or set stand + lookAt [x,y,z] to pick the spot yourself. If no edge is found they go back in their chest.",
       "auto": true,
@@ -93,9 +133,9 @@
       "fire_charge": 10
     },
     "targets": {
-      "redstone_block": 768,
-      "fire_charge": 768,
-      "iron_trapdoor": 128
+      "redstone_block": 512,
+      "fire_charge": 512,
+      "iron_trapdoor": 512
     },
     "minPickaxeDurability": 100,
     "foodItem": "cooked_porkchop",
@@ -111,7 +151,7 @@
     "eatUntil": 14
   },
   "slicing": {
-    "_help": "fireCharge = bottom portal block of portal #1 in row 1. Every template entry is an offset [dx,dy,dz] from that block, confirmed with Targeted Block on 2026-10-30.",
+    "_help": "fireCharge is the bottom portal block of portal #1. Template values are offsets from this block.",
     "fireCharge": [
       0,
       64,
@@ -212,9 +252,10 @@
     "efficiencyOverride": null,
     "suppressionRetries": 2,
     "maxConsecutiveFailures": 2,
+    "retryOnce": true,
     "portalsPerUnit": 9,
     "unitsPerRow": 20,
-    "rows": 50,
+    "rows": 52,
     "portalStep": [
       1,
       0,

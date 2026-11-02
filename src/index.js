@@ -18,6 +18,8 @@ const { setupCommands } = require('./commands')
 const { ServerAuth, componentText } = require('./server-auth')
 const { Lock } = require('./lock')
 const slicer = require('./slicer')
+const stats = require('./stats')
+const ai = require('./ai')
 const { efficiencyLevel } = require('./dig')
 
 const cfg = loadConfig()
@@ -93,6 +95,7 @@ function start () {
       await movement.sleep(1500) // let inventory arrive
       log.info(`Ready as ${bot.username} at ${bot.entity.position.floored()} in ${bot.game.dimension}`)
       await survival.equipTotem(bot)
+      startHourlyReport(bot, ctx, cleanups)
       await runJob(bot, ctx)
     } catch (e) {
       log.error('job loop crashed:', e.stack || e.message)
@@ -104,6 +107,14 @@ function start () {
     reconnectDelay = cfg.reconnect.delayMs
     movement.setup(bot)
     survival.setupTotemWatch(bot, ctx)
+    // Report beacon Haste so you can see whether the bot is in range (dig times adjust automatically).
+    const hasteId = bot.registry.effectsByName.Haste?.id
+    bot.on('entityEffect', (e, eff) => {
+      if (e === bot.entity && eff.id === hasteId && !ctx.hasHaste) { ctx.hasHaste = true; log.info(`Haste ${eff.amplifier + 1} active — mining faster`) }
+    })
+    bot.on('entityEffectEnd', (e, eff) => {
+      if (e === bot.entity && eff.id === hasteId && ctx.hasHaste) { ctx.hasHaste = false; log.info('Haste ended — mining at normal speed') }
+    })
     cleanups.push(survival.startAutoEat(bot, cfg, ctx))
     serverAuth.onSpawn()
     maybeStartJob()
@@ -144,7 +155,14 @@ async function maintenance (bot, ctx) {
   if (!c.needed && !ctx.forceRestock) return true
   log.info(`Restock needed: ${ctx.forceRestock ? 'owner request' : c.reasons.join(', ')}`)
   ctx.forceRestock = false
-  const r = await restock(bot, cfg, ctx)
+  const t0 = Date.now()
+  let r = await restock(bot, cfg, ctx)
+  if (!r.ok && cfg.slicing.retryOnce !== false) {
+    log.warn(`Restock incomplete (${r.missing.join(', ')}) — trying once more`)
+    await movement.sleep(3000)
+    r = await restock(bot, cfg, ctx)
+  }
+  stats.recordRestock(Date.now() - t0, bot)
   if (!r.ok) {
     ctx.paused = true
     state.save({ running: false })
@@ -187,8 +205,10 @@ async function runJob (bot, ctx) {
     await maintenance(bot, ctx)
     if (ctx.paused || ctx.shuttingDown) continue
 
+    let skipped = false
     try {
       const r = await slicer.runPortal(bot, cfg, ctx, index)
+      skipped = !!r.skipped
       const s = state.get()
       const patch = { portalIndex: index + 1, step: state.STEPS[0], status: 'slicing' }
       if (!r.skipped) patch.completedPortals = s.completedPortals + 1
@@ -198,6 +218,8 @@ async function runJob (bot, ctx) {
         ctx.notify(`Portal #${index + 1} broke completely (no portal left after slicing).`)
       } else {
         failures = 0
+        ctx.retriedPortal = null
+        if (!r.skipped) stats.recordPortal(bot)
         log.info(`Portal #${index + 1} done. Portal left at: ${r.remnant.map(String).join(' ')}`)
       }
       state.save(patch)
@@ -210,13 +232,20 @@ async function runJob (bot, ctx) {
       if (ctx.shuttingDown) break
       if (e.pausedByOwner) { log.info(`Paused: ${e.message}`); continue }
       log.error(e.stack || e.message)
+      if (cfg.slicing.retryOnce !== false && ctx.retriedPortal !== index) {
+        ctx.retriedPortal = index
+        log.warn(`Portal #${index + 1}: retrying once after: ${e.message}`)
+        try { bot.pathfinder.setGoal(null); bot.clearControlStates() } catch (_) {}
+        await movement.sleep(3000)
+        continue
+      }
       ctx.paused = true
       state.save({ running: false, status: 'paused' })
       ctx.notify(`Paused: ${e.message}`)
       continue
     }
 
-    if (ctx.onceMode) {
+    if (ctx.onceMode && !skipped) {
       ctx.onceMode = false
       state.save({ running: false, status: 'idle' })
       ctx.notify(`One portal done (next is #${state.get().portalIndex + 1}). Say "${cfg.chatPrefix} start" to continue.`)
@@ -228,6 +257,23 @@ async function runJob (bot, ctx) {
 function digTicksFor (bot, eff) {
   const speed = 9 + (eff > 0 ? eff * eff + 1 : 0)
   return Math.ceil(1 / (speed / 50 / 30))
+}
+
+// Public message about the work done, every hour by default ("!slicer report on|off").
+function startHourlyReport (bot, ctx, cleanups) {
+  const minutes = cfg.ai?.hourlyReport?.minutes ?? 60
+  const timer = setInterval(async () => {
+    try {
+      if (!ctx.authenticated || ctx.shuttingDown) return
+      if (state.get().hourlyReport === false || cfg.ai?.hourlyReport?.enabled === false) return
+      const done = stats.portalsSince(Date.now() - minutes * 60e3)
+      if (done === 0) return // nothing to brag about (paused / just restarted)
+      const text = await ai.hourlyReport(bot, cfg, ctx, done, state.get().completedPortals, Math.round(done * 60 / minutes))
+      for (const c of text.match(/.{1,200}/g) ?? []) bot.chat(c)
+      log.info(`[Report] ${text}`)
+    } catch (e) { log.warn('hourly report failed:', e.message) }
+  }, minutes * 60e3)
+  cleanups.push(() => clearInterval(timer))
 }
 
 function waitForWake (ctx, ms) {

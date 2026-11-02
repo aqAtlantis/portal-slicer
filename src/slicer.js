@@ -165,9 +165,20 @@ async function runPortal (bot, cfg, ctx, index) {
   let s = state.get()
   if (s.portalIndex !== index) s = state.save({ portalIndex: index, step: STEPS[0] })
 
+  // Far away (e.g. the start of the next row)? Walk there first so the chunks load.
+  const corners = [[0, 0, -1], [0, 2, -1], [0, 0, 2], [0, 2, 2]].map(d => g.anchor.offset(...d))
+  const far = bot.entity.position.distanceTo(g.stand) > 6
+  const loaded = () => [...corners, ...g.obsidian, g.anchor].every(p => bot.blockAt(p))
+  if (far || !loaded()) {
+    log.info(`${label}: walking there (${Math.round(bot.entity.position.distanceTo(g.stand))} blocks)`)
+    await moveToExact(bot, g.stand.x, g.stand.y, g.stand.z)
+  }
+  // wait up to 15 s for the area around the portal to load
+  for (let t = 0; t < 300 && !loaded(); t++) await bot.waitForTicks(1)
+  if (!loaded()) throw new Error(`${label}: the area around the portal did not load`)
+
   // Is there really a portal frame here? The corner obsidian above and below the
   // middle row stays after slicing, so it must exist for both sliced and unsliced portals.
-  const corners = [[0, 0, -1], [0, 2, -1], [0, 0, 2], [0, 2, 2]].map(d => g.anchor.offset(...d))
   const notFrame = corners.filter(c => name(bot, c) !== 'obsidian')
   if (notFrame.length) {
     throw new Error(`${label}: no portal frame here (${notFrame[0]} is ${name(bot, notFrame[0])}) — check the unit/row spacing in config.json`)
